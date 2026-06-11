@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Heart,
   MessageCircle,
@@ -24,15 +24,21 @@ interface ReelPlayerProps {
 }
 
 export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps) {
-  const [currentScrollIndex, setCurrentScrollIndex] = useState(initialIndex);
+  const rotatedReels = useMemo(() => {
+    if (initialIndex <= 0) return reels;
+    const before = reels.slice(0, initialIndex);
+    const after = reels.slice(initialIndex);
+    return [...after, ...before];
+  }, [reels, initialIndex]);
+
+  const [currentScrollIndex, setCurrentScrollIndex] = useState(0);
   const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [prevScrollIndex, setPrevScrollIndex] = useState(initialIndex);
+  const [prevScrollIndex, setPrevScrollIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
@@ -40,7 +46,9 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
   // Sync state if initialIndex changes during render (standard React pattern)
   if (initialIndex !== prevInitialIndex) {
     setPrevInitialIndex(initialIndex);
-    setCurrentScrollIndex(initialIndex);
+    setCurrentScrollIndex(0);
+    setPrevScrollIndex(0);
+    setIsPlaying(true);
   }
 
   // Reset play state when changing reel index during render
@@ -74,19 +82,16 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
   // Scroll to active index when it changes or when mounted
   useEffect(() => {
     if (containerRef.current) {
-      const children = containerRef.current.children;
-      if (children[initialIndex]) {
-        children[initialIndex].scrollIntoView({ behavior: "auto" });
-      }
+      containerRef.current.scrollTop = 0;
     }
-  }, [initialIndex, reels]);
+  }, [rotatedReels]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
     const clientHeight = e.currentTarget.clientHeight;
     if (clientHeight > 0) {
       const newIndex = Math.round(scrollTop / clientHeight);
-      if (newIndex !== currentScrollIndex && newIndex >= 0 && newIndex < reels.length) {
+      if (newIndex !== currentScrollIndex && newIndex >= 0 && newIndex < rotatedReels.length) {
         setCurrentScrollIndex(newIndex);
       }
     }
@@ -100,7 +105,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
         const el = containerRef.current.children[newIdx] as HTMLElement;
         if (el) el.scrollIntoView({ behavior: "smooth" });
       }
-    } else if (direction === "down" && currentScrollIndex < reels.length - 1) {
+    } else if (direction === "down" && currentScrollIndex < rotatedReels.length - 1) {
       const newIdx = currentScrollIndex + 1;
       setCurrentScrollIndex(newIdx);
       if (containerRef.current) {
@@ -121,7 +126,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           id="reels-scroll-container"
         >
-          {reels.map((video, idx) => {
+          {rotatedReels.map((video, idx) => {
             const isActive = idx === currentScrollIndex;
             const isNext = idx === currentScrollIndex + 1;
             const shouldRenderPlayer = video.playback_id && (isActive || isNext);
@@ -334,7 +339,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
           </button>
           <button 
             onClick={() => scrollReel("down")}
-            disabled={currentScrollIndex === reels.length - 1}
+            disabled={currentScrollIndex === rotatedReels.length - 1}
             className="w-10 h-10 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white flex items-center justify-center border border-zinc-850 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-90"
           >
             <ChevronDown className="w-5 h-5" />
@@ -347,7 +352,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
           {/* Profile Avatar */}
           <div className="relative cursor-pointer hover:scale-105 transition-transform">
             <div className="w-10 h-10 rounded-full border border-white/20 bg-zinc-800 flex items-center justify-center text-xs font-bold text-white overflow-hidden">
-              {reels[currentScrollIndex]?.subject[0]?.toUpperCase() || "V"}
+              {rotatedReels[currentScrollIndex]?.subject[0]?.toUpperCase() || "V"}
             </div>
             <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-rose-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold border border-black">+</div>
           </div>
@@ -358,7 +363,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
               <Heart className="w-4.5 h-4.5 text-zinc-300 hover:text-rose-500 transition-colors" />
             </div>
             <span className="text-[9px] font-bold text-zinc-400">
-              {reels[currentScrollIndex]?.views === "1.2k" ? "1.2M" : "12.4k"}
+              {rotatedReels[currentScrollIndex]?.views === "1.2k" ? "1.2M" : "12.4k"}
             </span>
           </button>
 
@@ -368,7 +373,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
               <MessageCircle className="w-4.5 h-4.5 text-zinc-300 hover:text-blue-400 transition-colors" />
             </div>
             <span className="text-[9px] font-bold text-zinc-400">
-              {reels[currentScrollIndex]?.views === "1.2k" ? "45.2K" : "342"}
+              {rotatedReels[currentScrollIndex]?.views === "1.2k" ? "45.2K" : "342"}
             </span>
           </button>
 
@@ -378,7 +383,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
               <Bookmark className="w-4.5 h-4.5 text-zinc-300 hover:text-yellow-500 transition-colors" />
             </div>
             <span className="text-[9px] font-bold text-zinc-400">
-              {reels[currentScrollIndex]?.views === "1.2k" ? "12K" : "89"}
+              {rotatedReels[currentScrollIndex]?.views === "1.2k" ? "12K" : "89"}
             </span>
           </button>
 
