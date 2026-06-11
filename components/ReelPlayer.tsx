@@ -31,6 +31,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [landscapeMap, setLandscapeMap] = useState<Record<string, boolean>>({});
   
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,9 +52,12 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
   // Reset and sync seek state when active player ref or scroll index changes
   useEffect(() => {
     if (playerRef.current) {
+      // Force seek back to 0:00 when switching to ensure it plays from the beginning
+      playerRef.current.currentTime = 0;
+      
       const dur = playerRef.current.duration;
       setDuration(dur && !isNaN(dur) ? dur : 0);
-      setCurrentTime(playerRef.current.currentTime || 0);
+      setCurrentTime(0);
     } else {
       setDuration(0);
       setCurrentTime(0);
@@ -133,7 +137,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
                       ref={isActive ? playerRef : undefined}
                       playbackId={video.playback_id!}
                       streamType="on-demand"
-                      autoPlay="any"
+                      autoPlay={isActive ? "any" : undefined}
                       paused={!isActive || !isPlaying}
                       muted={isActive ? isMuted : true}
                       loop={isActive}
@@ -147,17 +151,25 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
                         }
                       }}
                       onLoadedMetadata={(e) => {
-                        if (isActive) {
-                          const target = e.target as HTMLVideoElement;
-                          if (target) {
+                        const target = e.target as HTMLVideoElement;
+                        if (target) {
+                          if (isActive) {
                             setDuration(target.duration);
+                          }
+                          const videoWidth = target.videoWidth;
+                          const videoHeight = target.videoHeight;
+                          if (videoWidth && videoHeight) {
+                            setLandscapeMap((prev) => ({
+                              ...prev,
+                              [video.id]: videoWidth > videoHeight,
+                            }));
                           }
                         }
                       }}
                       style={{
                         width: "100%",
                         height: "100%",
-                        "--media-object-fit": "contain",
+                        "--media-object-fit": landscapeMap[video.id] ? "contain" : "cover",
                         "--media-object-position": "center",
                         "--controls": "none",
                       } as React.CSSProperties & { [key: string]: string }}
@@ -395,7 +407,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
 
   if (onClose) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#030303] text-white flex items-center justify-center p-0 md:p-4">
+      <div className="fixed inset-0 z-50 bg-[#030303] text-white flex items-center justify-center pb-[56px] md:pb-0 p-0 md:p-4">
         {/* Close button */}
         <button 
           onClick={onClose}
