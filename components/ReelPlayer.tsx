@@ -31,7 +31,7 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [landscapeMap, setLandscapeMap] = useState<Record<string, boolean>>({});
+
   
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -152,24 +152,14 @@ export function ReelPlayer({ reels, initialIndex = 0, onClose }: ReelPlayerProps
                       }}
                       onLoadedMetadata={(e) => {
                         const target = e.target as HTMLVideoElement;
-                        if (target) {
-                          if (isActive) {
-                            setDuration(target.duration);
-                          }
-                          const videoWidth = target.videoWidth;
-                          const videoHeight = target.videoHeight;
-                          if (videoWidth && videoHeight) {
-                            setLandscapeMap((prev) => ({
-                              ...prev,
-                              [video.id]: videoWidth > videoHeight,
-                            }));
-                          }
+                        if (target && isActive) {
+                          setDuration(target.duration);
                         }
                       }}
                       style={{
                         width: "100%",
                         height: "100%",
-                        "--media-object-fit": landscapeMap[video.id] ? "contain" : "cover",
+                        "--media-object-fit": "contain",
                         "--media-object-position": "center",
                         "--controls": "none",
                       } as React.CSSProperties & { [key: string]: string }}

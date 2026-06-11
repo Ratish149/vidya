@@ -5,7 +5,6 @@ import { AlertCircle } from "lucide-react";
 import { Grade } from "@/components/types";
 import { useVideos } from "@/lib/hooks";
 import { VideoResponse } from "@/lib/types";
-import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
 import { ReelPlayer } from "@/components/ReelPlayer";
 
@@ -37,9 +36,6 @@ export default function ReelsPage() {
 
   return (
     <div className="h-[100dvh] bg-[#030303] text-white font-sans flex flex-col overflow-hidden">
-      {/* Sticky header nav */}
-      <Navbar streak={14} />
-
       {/* Main reels area */}
       <main className="flex-1 flex items-center justify-center bg-[#030303] overflow-hidden pb-[56px] md:pb-0">
         {isLoading ? (
