@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   fetchLessons, 
@@ -14,8 +13,17 @@ import {
   createChapter,
   createLesson,
   fetchLessonsAdmin,
+  uploadVideo,
 } from "./api";
-import { CreateMuxUploadPayload } from "./types";
+import {
+  CreateMuxUploadPayload,
+  AdminLoginPayload,
+  CreateCategoryPayload,
+  CreateSubjectPayload,
+  CreateChapterPayload,
+  CreateLessonPayload,
+  VideoResponse,
+} from "./types";
 
 export function useLessons() {
   return useQuery({
@@ -47,7 +55,7 @@ export function useSubjectLessons() {
 // Administrative hooks
 export function useAdminLogin() {
   return useMutation({
-    mutationFn: (payload: any) => adminLogin(payload),
+    mutationFn: (payload: AdminLoginPayload) => adminLogin(payload),
   });
 }
 
@@ -61,7 +69,7 @@ export function useCategories() {
 export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: any) => createCategory(payload),
+    mutationFn: (payload: CreateCategoryPayload) => createCategory(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminCategories"] });
     },
@@ -78,7 +86,7 @@ export function useSubjectsList() {
 export function useCreateSubject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: any) => createSubject(payload),
+    mutationFn: (payload: CreateSubjectPayload) => createSubject(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminSubjects"] });
     },
@@ -95,7 +103,7 @@ export function useChaptersList() {
 export function useCreateChapter() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: any) => createChapter(payload),
+    mutationFn: (payload: CreateChapterPayload) => createChapter(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminChapters"] });
     },
@@ -105,7 +113,7 @@ export function useCreateChapter() {
 export function useCreateLesson() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: any) => createLesson(payload),
+    mutationFn: (payload: CreateLessonPayload) => createLesson(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["adminLessons"] });
@@ -121,3 +129,12 @@ export function useLessonsAdmin() {
   });
 }
 
+export function useUploadVideo() {
+  return useMutation<
+    VideoResponse,
+    Error,
+    { formData: FormData; onProgress?: (progress: number) => void }
+  >({
+    mutationFn: ({ formData, onProgress }) => uploadVideo(formData, onProgress),
+  });
+}

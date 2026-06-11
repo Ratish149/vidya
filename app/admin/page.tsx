@@ -38,6 +38,7 @@ import {
   useLessonsAdmin,
   useCreateMuxUpload,
   useVideos,
+  useUploadVideo,
 } from "@/lib/hooks";
 import MuxUploader from "@mux/mux-uploader-react";
 
@@ -103,6 +104,7 @@ export default function AdminPage() {
   const createChapterMutation = useCreateChapter();
   const createLessonMutation = useCreateLesson();
   const createMuxUploadMutation = useCreateMuxUpload();
+  const uploadVideoMutation = useUploadVideo();
 
   // Check login state on mount
   useEffect(() => {
@@ -299,44 +301,30 @@ export default function AdminPage() {
     formData.append("order", videoOrder);
     formData.append("video_file", file);
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://localhost:8000/api/reel/videos/upload/", true);
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percentComplete = Math.round((event.loaded / event.total) * 100);
-        setUploadProgress(percentComplete);
+    uploadVideoMutation.mutate(
+      {
+        formData,
+        onProgress: (percent) => {
+          setUploadProgress(percent);
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsUploading(false);
+          setSuccessMsg(`Successfully uploaded "${videoTitle}" to the database!`);
+          setVideoTitle("");
+          setVideoDescription("");
+          setFile(null);
+          setUploadProgress(0);
+          refetchVideos();
+        },
+        onError: (err: any) => {
+          setIsUploading(false);
+          const errorDetail = err.error || err.message || JSON.stringify(err);
+          setErrorMsg(`Upload failed: ${errorDetail}`);
+        },
       }
-    };
-
-    xhr.onload = () => {
-      setIsUploading(false);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        setSuccessMsg(`Successfully uploaded "${videoTitle}" to the database!`);
-        setVideoTitle("");
-        setVideoDescription("");
-        setFile(null);
-        setUploadProgress(0);
-        refetchVideos();
-      } else {
-        try {
-          const response = JSON.parse(xhr.responseText);
-          const errors = Object.entries(response)
-            .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(", ") : val}`)
-            .join(" | ");
-          setErrorMsg(`Upload failed: ${errors}`);
-        } catch {
-          setErrorMsg("Upload failed. Please check backend server.");
-        }
-      }
-    };
-
-    xhr.onerror = () => {
-      setIsUploading(false);
-      setErrorMsg("Network error occurred during upload.");
-    };
-
-    xhr.send(formData);
+    );
   };
 
   // Helper toggle functions for tree explorer
@@ -1185,7 +1173,6 @@ export default function AdminPage() {
                         className="w-full bg-slate-50 border border-slate-200 focus:bg-white rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-800 transition-all outline-none"
                       >
                         <option value="standard">Standard Database Video (Local File)</option>
-                        <option value="mux">Mux Asset Reference (Direct Mux Uploader)</option>
                       </select>
                     </div>
 

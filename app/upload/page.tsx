@@ -5,11 +5,12 @@ import { ArrowLeft, CheckCircle, AlertCircle, Settings, Video } from "lucide-rea
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import MuxUploader from "@mux/mux-uploader-react";
-import { useLessons, useCreateMuxUpload } from "@/lib/hooks";
+import { useLessons, useCreateMuxUpload, useUploadVideo } from "@/lib/hooks";
 
 export default function UploadPage() {
   const { data: lessons = [], isLoading: loadingLessons } = useLessons();
   const createMuxUploadMutation = useCreateMuxUpload();
+  const uploadVideoMutation = useUploadVideo();
 
   // Form states
   const [lessonId, setLessonId] = useState<string>("");
@@ -79,46 +80,32 @@ export default function UploadPage() {
     formData.append("order", order);
     formData.append("video_file", file);
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://localhost:8000/api/reel/videos/upload/", true);
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percentComplete = Math.round((event.loaded / event.total) * 100);
-        setProgress(percentComplete);
+    uploadVideoMutation.mutate(
+      {
+        formData,
+        onProgress: (percent) => {
+          setProgress(percent);
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsUploading(false);
+          setStatusMessage({
+            type: "success",
+            text: `Successfully uploaded "${title}" to the database!`,
+          });
+          setTitle("");
+          setDescription("");
+          setFile(null);
+          setProgress(0);
+        },
+        onError: (err: any) => {
+          setIsUploading(false);
+          const errorDetail = err.error || err.message || JSON.stringify(err);
+          setStatusMessage({ type: "error", text: `Upload failed: ${errorDetail}` });
+        },
       }
-    };
-
-    xhr.onload = () => {
-      setIsUploading(false);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        setStatusMessage({
-          type: "success",
-          text: `Successfully uploaded "${title}" to the database!`,
-        });
-        setTitle("");
-        setDescription("");
-        setFile(null);
-        setProgress(0);
-      } else {
-        try {
-          const response = JSON.parse(xhr.responseText);
-          const errors = Object.entries(response)
-            .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(", ") : val}`)
-            .join(" | ");
-          setStatusMessage({ type: "error", text: `Upload failed: ${errors}` });
-        } catch {
-          setStatusMessage({ type: "error", text: "Upload failed. Please check backend server." });
-        }
-      }
-    };
-
-    xhr.onerror = () => {
-      setIsUploading(false);
-      setStatusMessage({ type: "error", text: "Network error occurred during upload." });
-    };
-
-    xhr.send(formData);
+    );
   };
 
 

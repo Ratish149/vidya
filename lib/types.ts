@@ -5,6 +5,40 @@ export interface Lesson {
   subject_name: string;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface Subject {
+  id: number;
+  name: string;
+  description?: string;
+  course_sub_category: number;
+  difficulty_level: string;
+  is_published: boolean;
+}
+
+export interface Chapter {
+  id: number;
+  name: string;
+  description?: string;
+  subject: number;
+  order: number;
+  is_published: boolean;
+}
+
+export interface LessonAdmin {
+  id: number;
+  name: string;
+  description?: string;
+  chapter: number;
+  content?: string;
+  order: number;
+  is_published: boolean;
+}
+
 export interface MuxAssetResponse {
   id: number;
   lesson: number;
@@ -58,4 +92,45 @@ export interface SubjectDetailResponse {
   id: number;
   name: string;
   lessons: SubjectLesson[];
+}
+
+export interface AdminLoginPayload {
+  username?: string;
+  password?: string;
+}
+
+export interface AdminLoginResponse {
+  success: boolean;
+  token?: string;
+  error?: string;
+}
+
+export interface CreateCategoryPayload {
+  name: string;
+  description?: string;
+}
+
+export interface CreateSubjectPayload {
+  name: string;
+  description?: string;
+  course_sub_category: number;
+  difficulty_level: string;
+  is_published: boolean;
+}
+
+export interface CreateChapterPayload {
+  name: string;
+  description?: string;
+  subject: number;
+  order: number;
+  is_published: boolean;
+}
+
+export interface CreateLessonPayload {
+  name: string;
+  description?: string;
+  chapter: number;
+  content?: string;
+  order: number;
+  is_published: boolean;
 }
