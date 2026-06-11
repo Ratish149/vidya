@@ -10,10 +10,10 @@ export interface ReelItem {
   title: string;
   duration: string;
   views: string;
-  Icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
-  iconColor: string;
-  progress: number;
+  Icon?: React.ComponentType<{ className?: string }>;
+  iconBg?: string;
+  iconColor?: string;
+  progress?: number;
   playback_id?: string | null;
   lessonName?: string;
 }

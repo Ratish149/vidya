@@ -1,25 +1,20 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import {
-  Atom,
   Flame,
   Bookmark,
-  X,
-  Heart,
-  MessageCircle,
-  AlertCircle,
-  Play,
   Layers,
   BookOpen,
+  AlertCircle,
 } from "lucide-react";
-import MuxPlayer from "@mux/mux-player-react";
 
 import { Grade, ReelItem } from "@/components/types";
 import { useSubjectLessons, useVideos } from "@/lib/hooks";
 import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
 import { ReelCard } from "@/components/ReelCard";
+import { ReelPlayer } from "@/components/ReelPlayer";
 import { VideoResponse } from "@/lib/types";
 
 export default function LessonsPage() {
@@ -29,8 +24,6 @@ export default function LessonsPage() {
   // Modal states for swiping reels
   const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
   const [reelVideos, setReelVideos] = useState<ReelItem[] | null>(null);
-  const [currentScrollIndex, setCurrentScrollIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch hierarchical subjects and lessons
   const { data: subjects = [], isLoading: isLoadingSubjects } = useSubjectLessons();
@@ -75,9 +68,6 @@ export default function LessonsPage() {
         title: video.title,
         duration: durationStr,
         views: "1.2k",
-        Icon: Atom,
-        iconBg: "bg-blue-50",
-        iconColor: "text-blue-600",
         progress: 0,
         playback_id: video.playback_id,
       };
@@ -89,30 +79,8 @@ export default function LessonsPage() {
     if (idx !== -1) {
       setReelVideos(reels);
       setActiveReelIndex(idx);
-      setCurrentScrollIndex(idx);
     }
   };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    const clientHeight = e.currentTarget.clientHeight;
-    if (clientHeight > 0) {
-      const newIndex = Math.round(scrollTop / clientHeight);
-      if (newIndex !== currentScrollIndex && newIndex >= 0 && newIndex < (reelVideos?.length || 0)) {
-        setCurrentScrollIndex(newIndex);
-      }
-    }
-  };
-
-  // Scroll to active index when modal opens
-  useEffect(() => {
-    if (activeReelIndex !== null && containerRef.current) {
-      const children = containerRef.current.children;
-      if (children[activeReelIndex]) {
-        children[activeReelIndex].scrollIntoView({ behavior: "auto" });
-      }
-    }
-  }, [activeReelIndex, reelVideos]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-24">
@@ -258,99 +226,14 @@ export default function LessonsPage() {
 
       {/* Vertical Reels Swiper Modal */}
       {activeReelIndex !== null && reelVideos !== null && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center">
-          {/* Close button */}
-          <button
-            onClick={() => {
-              setActiveReelIndex(null);
-              setReelVideos(null);
-            }}
-            className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-          >
-            <X className="w-6 h-6" />
-          </button>
-
-          {/* Swipe Container resembling Mobile Device Screen */}
-          <div className="relative w-full max-w-[360px] h-full max-h-[85vh] sm:rounded-3xl overflow-hidden shadow-2xl border border-gray-800/80 bg-black">
-            <div
-              ref={containerRef}
-              onScroll={handleScroll}
-              className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-              id="reels-scroll-container"
-            >
-              {reelVideos.map((video, idx) => {
-                const isActive = idx === currentScrollIndex;
-                return (
-                  <div
-                    key={`${video.id}-${idx}`}
-                    className="w-full h-full snap-start snap-always flex-shrink-0 relative flex flex-col justify-between bg-black"
-                  >
-                    {/* Mux Player */}
-                    <div className="absolute inset-0 w-full h-full z-0">
-                      {video.playback_id && isActive ? (
-                        <MuxPlayer
-                          playbackId={video.playback_id}
-                          streamType="on-demand"
-                          autoPlay
-                          muted={false}
-                          loop
-                          className="w-full h-full object-cover"
-                        />
-                      ) : video.playback_id ? (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-950">
-                          <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white animate-pulse">
-                            <Play className="w-5 h-5 fill-white text-white" />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 p-6 text-center">
-                          <AlertCircle className="w-10 h-10 text-slate-500 animate-pulse" />
-                          <p className="font-semibold text-sm">Streaming playback is not ready yet</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Side Interaction Rail Overlay */}
-                    <div className="absolute right-4 bottom-24 flex flex-col items-center gap-5 z-10 text-white drop-shadow-md">
-                      <button className="flex flex-col items-center gap-1 hover:scale-110 transition-transform cursor-pointer">
-                        <div className="w-10 h-10 rounded-full bg-slate-950/60 backdrop-blur-md flex items-center justify-center border border-white/10">
-                          <Heart className="w-4 h-4 fill-white text-white" />
-                        </div>
-                        <span className="text-[10px] font-bold">12.4k</span>
-                      </button>
-                      <button className="flex flex-col items-center gap-1 hover:scale-110 transition-transform cursor-pointer">
-                        <div className="w-10 h-10 rounded-full bg-slate-950/60 backdrop-blur-md flex items-center justify-center border border-white/10">
-                          <MessageCircle className="w-4 h-4" />
-                        </div>
-                        <span className="text-[10px] font-bold">342</span>
-                      </button>
-                      <button className="flex flex-col items-center gap-1 hover:scale-110 transition-transform cursor-pointer">
-                        <div className="w-10 h-10 rounded-full bg-slate-950/60 backdrop-blur-md flex items-center justify-center border border-white/10">
-                          <Bookmark className="w-4 h-4" />
-                        </div>
-                        <span className="text-[10px] font-bold">89</span>
-                      </button>
-                    </div>
-
-                    {/* Bottom details Overlay */}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-5 pt-16 z-10 text-white">
-                      <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md bg-white/95 text-slate-950 backdrop-blur-sm`}>
-                        {video.subject}
-                      </span>
-                      <h3 className="font-display font-bold text-sm mt-2 leading-snug drop-shadow-sm line-clamp-2">
-                        {video.title}
-                      </h3>
-                      <p className="text-[10px] text-slate-300 mt-1 drop-shadow-sm font-medium">
-                        Grade {video.grade} • Duration {video.duration}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <ReelPlayer
+          reels={reelVideos}
+          initialIndex={activeReelIndex}
+          onClose={() => {
+            setActiveReelIndex(null);
+            setReelVideos(null);
+          }}
+        />
       )}
 
       {/* Bottom Nav for handheld screens */}

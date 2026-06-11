@@ -11,7 +11,7 @@ interface ReelCardProps {
 }
 
 export function ReelCard({ item, unlocked, onPlay }: ReelCardProps) {
-  const { Icon } = item;
+  const Icon = item.Icon || Play;
 
   return (
     <div 
@@ -27,8 +27,8 @@ export function ReelCard({ item, unlocked, onPlay }: ReelCardProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className={`w-full h-full ${item.iconBg} flex items-center justify-center`}>
-            <Icon className={`w-14 h-14 ${item.iconColor} opacity-80`} />
+          <div className={`w-full h-full ${item.iconBg || "bg-blue-50"} flex items-center justify-center`}>
+            <Icon className={`w-14 h-14 ${item.iconColor || "text-blue-600"} opacity-80`} />
           </div>
         )}
       </div>
@@ -72,11 +72,11 @@ export function ReelCard({ item, unlocked, onPlay }: ReelCardProps) {
         </div>
         <div className="flex items-center justify-between text-[10.5px] text-gray-500 font-medium">
           <span className="tabular-nums">{item.views} views</span>
-          {item.progress > 0 && (
+          {typeof item.progress === "number" && item.progress > 0 && (
             <span className="font-bold text-blue-600 tabular-nums">{item.progress}%</span>
           )}
         </div>
-        {item.progress > 0 && (
+        {typeof item.progress === "number" && item.progress > 0 && (
           <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full bg-blue-600 rounded-full transition-all duration-300" style={{ width: `${item.progress}%` }} />
           </div>
