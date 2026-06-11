@@ -1,240 +1,122 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import {
-  Atom,
-  Dna,
-  Ruler,
-  Landmark,
-  Sprout,
-  Microscope,
-  FlaskConical,
-  Hash,
-  Leaf,
-  Flame,
-  Bookmark,
-  X,
   Heart,
   MessageCircle,
+  Bookmark,
   AlertCircle,
   Play,
   ChevronUp,
   ChevronDown,
   Share2,
 } from "lucide-react";
-
 import MuxPlayer from "@mux/mux-player-react";
 
-import { Grade, ReelItem } from "@/components/types";
-import { Navbar } from "@/components/Navbar";
-import { Hero } from "@/components/Hero";
-import { SubjectFilter } from "@/components/SubjectFilter";
-import { ReelRow } from "@/components/ReelRow";
-import { SectionHeader } from "@/components/SectionHeader";
-import { StudyVibes } from "@/components/StudyVibes";
-import { FriendsActivity } from "@/components/FriendsActivity";
-import { ExamPrep } from "@/components/ExamPrep";
-import { BottomNav } from "@/components/BottomNav";
+import { Grade } from "@/components/types";
 import { useVideos } from "@/lib/hooks";
 import { VideoResponse } from "@/lib/types";
+import { Navbar } from "@/components/Navbar";
+import { BottomNav } from "@/components/BottomNav";
 
-const subjectIconMap: Record<string, any> = {
-  Physics: Atom,
-  Maths: Ruler,
-  Chemistry: FlaskConical,
-  Biology: Dna,
-  History: Landmark,
-  Science: Microscope,
-};
-
-const subjectColorMap: Record<string, string> = {
-  Physics: "text-amber-600",
-  Maths: "text-sky-600",
-  Chemistry: "text-rose-600",
-  Biology: "text-emerald-600",
-  History: "text-violet-600",
-};
-
-const subjectBgMap: Record<string, string> = {
-  Physics: "bg-amber-50",
-  Maths: "bg-sky-50",
-  Chemistry: "bg-rose-50",
-  Biology: "bg-emerald-50",
-  History: "bg-violet-50",
-};
-
-export default function Home() {
-  const [grade, setGrade] = useState<Grade>(7);
-  const [subject, setSubject] = useState<string>("All");
-
+export default function ReelsPage() {
   // Fetch real videos from the backend using Tanstack Query
-  const { data: dbVideos = [] } = useVideos();
-
-  // Modal states for swiping reels
-  const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
-  const [reelVideos, setReelVideos] = useState<ReelItem[] | null>(null);
+  const { data: dbVideos = [], isLoading } = useVideos();
   const [currentScrollIndex, setCurrentScrollIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Map backend videos to ReelItem format
-  const dbReels = useMemo(() => {
-    return (dbVideos as VideoResponse[]).map((video: VideoResponse) => {
+  // Map backend videos to standard format
+  const reels = useMemo(() => {
+    return (dbVideos as VideoResponse[]).map((video) => {
       const sub = video.subject_name || "General";
-      const IconComp = Atom;
       const durationStr = video.video_duration
         ? `${Math.floor(video.video_duration / 60)}:${String(video.video_duration % 60).padStart(2, "0")}`
         : "1:30";
 
       return {
         id: `db-${video.id}`,
-        grade: grade,
+        grade: 7 as Grade,
         subject: sub,
         subjectColor: "text-blue-600",
         title: video.title,
         duration: durationStr,
         views: "1.2k",
-        Icon: IconComp,
-        iconBg: subjectBgMap[sub] || "bg-blue-50",
-        iconColor: subjectColorMap[sub] || "text-blue-600",
-        progress: 0,
         playback_id: video.playback_id,
         lessonName: video.lesson_name || "",
       };
     });
-  }, [dbVideos, grade]);
-
-  // Use backend reels as visible reels
-  const visibleReels = useMemo(() => {
-    return dbReels.filter((r: ReelItem) => (subject === "All" ? true : r.subject.toLowerCase() === subject.toLowerCase()));
-  }, [dbReels, subject]);
-
-  const trending = useMemo(
-    () => visibleReels.filter((r: ReelItem) => r.grade === grade).slice(0, 6),
-    [visibleReels, grade],
-  );
-
-  const recs = useMemo(() => {
-    if (subject === "All") {
-      return dbReels.slice(0, 6);
-    }
-    return dbReels.filter((r: ReelItem) => r.subject.toLowerCase() === subject.toLowerCase()).slice(0, 6);
-  }, [dbReels, subject]);
-
-  // Open clicked video in reel format
-  const handlePlayReel = (clickedItem: ReelItem) => {
-    const idx = visibleReels.findIndex((r) => r.id === clickedItem.id);
-    if (idx !== -1) {
-      setReelVideos(visibleReels);
-      setActiveReelIndex(idx);
-      setCurrentScrollIndex(idx);
-    }
-  };
+  }, [dbVideos]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
     const clientHeight = e.currentTarget.clientHeight;
     if (clientHeight > 0) {
       const newIndex = Math.round(scrollTop / clientHeight);
-      if (newIndex !== currentScrollIndex && newIndex >= 0 && newIndex < (reelVideos?.length || 0)) {
+      if (newIndex !== currentScrollIndex && newIndex >= 0 && newIndex < reels.length) {
         setCurrentScrollIndex(newIndex);
       }
     }
   };
 
-  // Scroll to active index when modal opens
-  useEffect(() => {
-    if (activeReelIndex !== null && containerRef.current) {
-      const children = containerRef.current.children;
-      if (children[activeReelIndex]) {
-        children[activeReelIndex].scrollIntoView({ behavior: "auto" });
+  const scrollReel = (direction: "up" | "down") => {
+    if (direction === "up" && currentScrollIndex > 0) {
+      const newIdx = currentScrollIndex - 1;
+      setCurrentScrollIndex(newIdx);
+      if (containerRef.current) {
+        const el = containerRef.current.children[newIdx] as HTMLElement;
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }
+    } else if (direction === "down" && currentScrollIndex < reels.length - 1) {
+      const newIdx = currentScrollIndex + 1;
+      setCurrentScrollIndex(newIdx);
+      if (containerRef.current) {
+        const el = containerRef.current.children[newIdx] as HTMLElement;
+        if (el) el.scrollIntoView({ behavior: "smooth" });
       }
     }
-  }, [activeReelIndex, reelVideos]);
+  };
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans pb-24">
+    <div className="min-h-screen bg-[#030303] text-white font-sans pb-16 md:pb-0 flex flex-col">
       {/* Sticky header nav */}
       <Navbar streak={14} />
 
-      {/* Hero promo area */}
-      {/* <Hero currentGrade={grade} onGradeChange={setGrade} streak={14} /> */}
-
-      {/* Main dashboard list container */}
-      <main className="max-w-5xl mx-auto px-6 pt-8">
-        {/* Subject scroll selector */}
-        <SubjectFilter currentSubject={subject} onSubjectChange={setSubject} />
-
-
-        {/* Trending lessons list */}
-        <div className="mb-8">
-          <SectionHeader Icon={Flame} title={`Trending in Grade ${grade}`} />
-          {trending.length > 0 ? (
-            <ReelRow items={trending} currentGrade={grade} onPlay={handlePlayReel} />
-          ) : (
-            <div className="text-sm text-gray-500 bg-gray-50/50 border border-gray-200/60 rounded-2xl p-8 text-center font-medium">
-              No reels for this subject in Grade {grade} yet.
-            </div>
-          )}
-        </div>
-
-        {/* Study music section */}
-        {/* <StudyVibes /> */}
-
-        <div className="h-px bg-gray-100/80 mb-8" />
-
-        {/* Recommendations block */}
-        <div className="mb-8">
-          <SectionHeader Icon={Bookmark} title="Because you watched Cell division" />
-          <ReelRow 
-            items={recs.length ? recs : visibleReels.filter((r) => r.grade === grade)} 
-            currentGrade={grade} 
-            onPlay={handlePlayReel}
-          />
-        </div>
-
-        {/* Classmates activity feed */}
-        <FriendsActivity />
-
-        <div className="h-px bg-gray-100/80 mb-8" />
-
-        {/* Exam preparation season items */}
-        {/* <ExamPrep currentGrade={grade} /> */}
-      </main>
-
-      {/* Vertical Reels Swiper Modal */}
-      {activeReelIndex !== null && reelVideos !== null && (
-        <div className="fixed inset-0 z-50 bg-[#030303] text-white flex items-center justify-center p-4">
-          {/* Close button */}
-          <button 
-            onClick={() => {
-              setActiveReelIndex(null);
-              setReelVideos(null);
-            }}
-            className="absolute top-6 left-6 z-50 p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer border border-white/10"
-          >
-            <X className="w-6 h-6" />
-          </button>
-
-          {/* Container for Video + Outside Controls side by side */}
-          <div className="flex items-center gap-6 max-h-[90vh] h-full w-full max-w-2xl justify-center relative">
+      {/* Main reels area */}
+      <main className="flex-1 flex items-center justify-center py-4 md:py-8 bg-[#030303]">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center gap-3">
+            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-slate-400 text-sm font-semibold">Loading Reels...</p>
+          </div>
+        ) : reels.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 text-center px-6">
+            <AlertCircle className="w-12 h-12 text-slate-600 animate-pulse" />
+            <h3 className="font-bold text-lg">No Reels Available</h3>
+            <p className="text-slate-500 text-sm max-w-xs leading-relaxed">
+              Upload some videos in the Upload section to populate this reels feed!
+            </p>
+          </div>
+        ) : (
+          /* Container for Video + Outside Controls side by side */
+          <div className="flex items-center gap-6 h-[75vh] sm:h-[80vh] w-full max-w-2xl justify-center relative">
             
             {/* Clean, Full Height Video Card */}
-            <div className="relative aspect-[9/16] h-full max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl border border-zinc-800 bg-[#0c0c0c] flex-shrink-0">
-              <div 
+            <div className="relative aspect-[9/16] h-[75vh] sm:h-[80vh] rounded-2xl overflow-hidden shadow-2xl border border-zinc-850 bg-[#0c0c0c] flex-shrink-0">
+              <div
                 ref={containerRef}
                 onScroll={handleScroll}
                 className="h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                id="reels-scroll-container"
+                id="reels-feed-container"
               >
-                {reelVideos.map((video, idx) => {
+                {reels.map((video, idx) => {
                   const isActive = idx === currentScrollIndex;
                   return (
-                    <div 
-                      key={`${video.id}-${idx}`} 
+                    <div
+                      key={`${video.id}-${idx}`}
                       className="w-full h-full snap-start snap-always flex-shrink-0 relative flex flex-col justify-between bg-black"
                     >
-                      {/* Mux Player Iframe */}
+                      {/* Mux Player */}
                       <div className="absolute inset-0 w-full h-full z-0">
                         {video.playback_id && isActive ? (
                           <MuxPlayer
@@ -255,7 +137,6 @@ export default function Home() {
                           <div className="flex flex-col items-center justify-center h-full text-zinc-400 gap-2 p-6 text-center">
                             <AlertCircle className="w-10 h-10 text-zinc-500 animate-pulse" />
                             <p className="font-semibold text-sm">Streaming playback is not ready yet</p>
-                            <p className="text-xs text-zinc-600">The video is still processing on Mux or is missing a playback ID.</p>
                           </div>
                         )}
                       </div>
@@ -263,7 +144,7 @@ export default function Home() {
                       {/* Bottom details Overlay */}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent p-5 pb-16 pt-16 z-10 text-white pointer-events-none">
                         <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-md ${video.subjectColor} bg-white/95 backdrop-blur-sm`}>
-                          {video.subject}
+                          {video.lessonName || video.subject}
                         </span>
                         <h3 className="font-display font-bold text-sm mt-2 leading-snug drop-shadow-sm line-clamp-2">
                           {video.title}
@@ -279,38 +160,20 @@ export default function Home() {
             </div>
 
             {/* Outside Action Controls (to the right of the video) */}
-            <div className="flex flex-col justify-between h-full max-h-[80vh] py-6 z-10">
+            <div className="flex flex-col justify-between h-[75vh] sm:h-[80vh] py-6 z-10">
               
               {/* Scroll Navigation Arrows (Up/Down) */}
               <div className="flex flex-col gap-2">
                 <button 
-                  onClick={() => {
-                    if (currentScrollIndex > 0) {
-                      const newIdx = currentScrollIndex - 1;
-                      setCurrentScrollIndex(newIdx);
-                      if (containerRef.current) {
-                        const el = containerRef.current.children[newIdx] as HTMLElement;
-                        if (el) el.scrollIntoView({ behavior: "smooth" });
-                      }
-                    }
-                  }}
+                  onClick={() => scrollReel("up")}
                   disabled={currentScrollIndex === 0}
                   className="w-10 h-10 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white flex items-center justify-center border border-zinc-850 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-90"
                 >
                   <ChevronUp className="w-5 h-5" />
                 </button>
                 <button 
-                  onClick={() => {
-                    if (currentScrollIndex < reelVideos.length - 1) {
-                      const newIdx = currentScrollIndex + 1;
-                      setCurrentScrollIndex(newIdx);
-                      if (containerRef.current) {
-                        const el = containerRef.current.children[newIdx] as HTMLElement;
-                        if (el) el.scrollIntoView({ behavior: "smooth" });
-                      }
-                    }
-                  }}
-                  disabled={currentScrollIndex === reelVideos.length - 1}
+                  onClick={() => scrollReel("down")}
+                  disabled={currentScrollIndex === reels.length - 1}
                   className="w-10 h-10 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white flex items-center justify-center border border-zinc-850 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-90"
                 >
                   <ChevronDown className="w-5 h-5" />
@@ -323,7 +186,7 @@ export default function Home() {
                 {/* Profile Avatar */}
                 <div className="relative cursor-pointer hover:scale-105 transition-transform">
                   <div className="w-11 h-11 rounded-full border border-white/20 bg-zinc-800 flex items-center justify-center text-sm font-bold text-white overflow-hidden">
-                    {reelVideos[currentScrollIndex]?.subject[0]?.toUpperCase() || "V"}
+                    {reels[currentScrollIndex]?.subject[0]?.toUpperCase() || "V"}
                   </div>
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold border border-black">+</div>
                 </div>
@@ -364,10 +227,10 @@ export default function Home() {
             </div>
 
           </div>
-        </div>
-      )}
+        )}
+      </main>
 
-      {/* Bottom nav for handheld screens */}
+      {/* Bottom Nav for handheld devices */}
       <BottomNav />
     </div>
   );
